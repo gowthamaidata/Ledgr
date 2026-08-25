@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ledgr — Insights</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#0F1729', navy2: '#182242', gold: '#D4A853', goldLight: '#E8C878',
+          offwhite: '#FAFAF8', accent: '#3B82F6', income: '#10B981', expense: '#EF4444',
+        },
+        fontFamily: { sans: ['Inter', 'sans-serif'] },
+        boxShadow: {
+          card: '0 1px 2px rgba(15,23,41,0.04), 0 10px 24px -10px rgba(15,23,41,0.18)',
+          phone: '0 30px 70px -15px rgba(15,23,41,0.5)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .donut {
+    background: conic-gradient(#D4A853 0% 32%, #1A2540 32% 60%, #3B82F6 60% 75%, #A855F7 75% 89%, #9CA3AF 89% 100%);
+  }
+</style>
+</head>
+<body class="bg-neutral-200 min-h-screen flex items-center justify-center p-6">
+
+  <div class="w-[390px] h-[844px] bg-offwhite rounded-[44px] overflow-hidden shadow-phone relative flex flex-col ring-1 ring-black/5">
+
+    <!-- Dynamic Island -->
+    <div class="absolute top-2.5 left-1/2 -translate-x-1/2 w-[126px] h-[34px] bg-black rounded-full z-50"></div>
+
+    <div class="flex-1 overflow-y-auto no-scrollbar pb-28">
+
+      <!-- Header (navy) -->
+      <div class="bg-navy rounded-b-[28px] pt-14 pb-6 px-6">
+        <div class="flex items-center justify-between text-white text-[15px] font-semibold mb-6 -mt-2">
+          <span>9:41</span>
+          <div class="flex items-center gap-1.5">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="0.6"/><rect x="5" y="5" width="3" height="7" rx="0.6"/><rect x="10" y="3" width="3" height="9" rx="0.6"/><rect x="15" y="0" width="3" height="12" rx="0.6"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 9.6a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6zM4.7 7a4.9 4.9 0 016.6 0L10 8.4a2.9 2.9 0 00-4 0L4.7 7zM2.1 4.4a8.4 8.4 0 0111.8 0L12.6 5.8a6.4 6.4 0 00-9.2 0L2.1 4.4z"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="white"/><rect x="2" y="2" width="18" height="8" rx="1.5" fill="white"/><rect x="22.5" y="4" width="1.5" height="4" rx="0.75" fill="white"/></svg>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <button class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <p class="text-white text-[19px] font-bold">Insights</p>
+          </div>
+          <button class="flex items-center gap-1.5 bg-white/10 text-white text-[13px] font-semibold px-3.5 py-2 rounded-full">
+            Aug
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+
+        <!-- Summary strip -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-white/5 rounded-2xl p-3.5 border border-white/10">
+            <p class="text-[11px] text-neutral-400 font-medium mb-1">Income</p>
+            <p class="text-income text-[16px] font-extrabold">₹42.5K</p>
+          </div>
+          <div class="bg-white/5 rounded-2xl p-3.5 border border-white/10">
+            <p class="text-[11px] text-neutral-400 font-medium mb-1">Expenses</p>
+            <p class="text-expense text-[16px] font-extrabold">₹28.0K</p>
+          </div>
+          <div class="bg-white/5 rounded-2xl p-3.5 border border-white/10">
+            <p class="text-[11px] text-neutral-400 font-medium mb-1">Savings</p>
+            <p class="text-gold text-[16px] font-extrabold">₹14.5K</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Trend -->
+      <div class="px-6 mt-6">
+        <div class="bg-white rounded-2xl shadow-card p-5">
+          <div class="flex items-center justify-between mb-5">
+            <p class="text-navy text-[15px] font-bold">Monthly Trend</p>
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1.5 text-[11px] text-neutral-500 font-medium"><span class="w-2.5 h-2.5 rounded-sm bg-income inline-block"></span>Income</span>
+              <span class="flex items-center gap-1.5 text-[11px] text-neutral-500 font-medium"><span class="w-2.5 h-2.5 rounded-sm bg-expense inline-block"></span>Expenses</span>
+            </div>
+          </div>
+
+          <div class="flex items-end justify-between h-[100px] px-1">
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-income" style="height:78px"></div>
+                <div class="w-3 rounded-t-sm bg-expense" style="height:31px"></div>
+              </div>
+              <span class="text-[10.5px] text-neutral-400 font-medium">Mar</span>
+            </div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-income" style="height:76px"></div>
+                <div class="w-3 rounded-t-sm bg-expense" style="height:34px"></div>
+              </div>
+              <span class="text-[10.5px] text-neutral-400 font-medium">Apr</span>
+            </div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-income" style="height:83px"></div>
+                <div class="w-3 rounded-t-sm bg-expense" style="height:29px"></div>
+              </div>
+              <span class="text-[10.5px] text-neutral-400 font-medium">May</span>
+            </div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-income" style="height:80px"></div>
+                <div class="w-3 rounded-t-sm bg-expense" style="height:37px"></div>
+              </div>
+              <span class="text-[10.5px] text-neutral-400 font-medium">Jun</span>
+            </div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-income" style="height:88px"></div>
+                <div class="w-3 rounded-t-sm bg-expense" style="height:32px"></div>
+              </div>
+              <span class="text-[10.5px] text-neutral-400 font-medium">Jul</span>
+            </div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="flex items-end gap-1 h-[88px]">
+                <div class="w-3 rounded-t-sm bg-gold" style="height:42px"></div>
+                <div class="w-3 rounded-t-sm bg-expense/60" style="height:27px"></div>
+              </div>
+              <span class="text-[10.5px] text-navy font-bold">Aug</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spending by Category -->
+      <div class="px-6 mt-5">
+        <div class="bg-white rounded-2xl shadow-card p-5">
+          <p class="text-navy text-[15px] font-bold mb-5">Spending by Category</p>
+
+          <div class="flex items-center gap-5">
+            <div class="relative w-[132px] h-[132px] shrink-0">
+              <div class="donut w-full h-full rounded-full"></div>
+              <div class="absolute inset-[16px] bg-white rounded-full flex flex-col items-center justify-center">
+                <p class="text-[10px] text-neutral-400 font-semibold">TOTAL</p>
+                <p class="text-navy text-[17px] font-extrabold">₹28.0K</p>
+              </div>
+            </div>
+
+            <div class="flex-1 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-[12.5px] text-navy font-medium"><span class="w-2.5 h-2.5 rounded-full bg-gold inline-block"></span>Food &amp; Dining</span>
+                <span class="text-[12.5px] font-bold text-navy">32%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-[12.5px] text-navy font-medium"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:#1A2540"></span>Rent/EMI</span>
+                <span class="text-[12.5px] font-bold text-navy">28%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-[12.5px] text-navy font-medium"><span class="w-2.5 h-2.5 rounded-full bg-accent inline-block"></span>Transport</span>
+                <span class="text-[12.5px] font-bold text-navy">15%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-[12.5px] text-navy font-medium"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:#A855F7"></span>Shopping</span>
+                <span class="text-[12.5px] font-bold text-navy">14%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-[12.5px] text-navy font-medium"><span class="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block"></span>Others</span>
+                <span class="text-[12.5px] font-bold text-navy">11%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Merchants -->
+      <div class="px-6 mt-5">
+        <div class="bg-white rounded-2xl shadow-card p-5">
+          <p class="text-navy text-[15px] font-bold mb-4">Top Merchants</p>
+
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[17px] shrink-0">🍔</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[13.5px] font-semibold text-navy">Swiggy</p>
+                  <p class="text-[13px] font-bold text-navy">₹6,240</p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="h-1.5 flex-1 bg-neutral-100 rounded-full overflow-hidden mr-3">
+                    <div class="h-full bg-gold rounded-full" style="width:100%"></div>
+                  </div>
+                  <span class="text-[10.5px] text-neutral-400 font-medium shrink-0">14 txns</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-[17px] shrink-0">🛒</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[13.5px] font-semibold text-navy">DMart</p>
+                  <p class="text-[13px] font-bold text-navy">₹4,120</p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="h-1.5 flex-1 bg-neutral-100 rounded-full overflow-hidden mr-3">
+                    <div class="h-full bg-neutral-400 rounded-full" style="width:66%"></div>
+                  </div>
+                  <span class="text-[10.5px] text-neutral-400 font-medium shrink-0">5 txns</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-[17px] shrink-0">🛍️</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[13.5px] font-semibold text-navy">Amazon</p>
+                  <p class="text-[13px] font-bold text-navy">₹3,950</p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="h-1.5 flex-1 bg-neutral-100 rounded-full overflow-hidden mr-3">
+                    <div class="h-full rounded-full" style="width:63%; background:#A855F7"></div>
+                  </div>
+                  <span class="text-[10.5px] text-neutral-400 font-medium shrink-0">4 txns</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[17px] shrink-0">🚗</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[13.5px] font-semibold text-navy">Ola / Uber</p>
+                  <p class="text-[13px] font-bold text-navy">₹3,780</p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="h-1.5 flex-1 bg-neutral-100 rounded-full overflow-hidden mr-3">
+                    <div class="h-full bg-accent rounded-full" style="width:61%"></div>
+                  </div>
+                  <span class="text-[10.5px] text-neutral-400 font-medium shrink-0">9 txns</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[17px] shrink-0">⚡</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[13.5px] font-semibold text-navy">BESCOM</p>
+                  <p class="text-[13px] font-bold text-navy">₹1,850</p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="h-1.5 flex-1 bg-neutral-100 rounded-full overflow-hidden mr-3">
+                    <div class="h-full bg-neutral-400 rounded-full" style="width:30%"></div>
+                  </div>
+                  <span class="text-[10.5px] text-neutral-400 font-medium shrink-0">2 txns</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-neutral-100 px-6 pt-2.5 pb-8 z-40">
+      <div class="flex items-center justify-between">
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5l9-7 9 7V20a1 1 0 01-1 1h-5v-8H9v8H4a1 1 0 01-1-1V9.5z"/></svg>
+          <span class="text-[10.5px] font-medium">Home</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-navy w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-4"/></svg>
+          <span class="text-[10.5px] font-semibold">Insights</span>
+        </button>
+        <button class="w-14 h-14 rounded-full bg-navy flex items-center justify-center shadow-lg -mt-9 ring-[6px] ring-offwhite shrink-0">
+          <span class="text-gold text-[26px] font-light leading-none -mt-0.5">+</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1H3V7z"/><path d="M3 8h18v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/><path d="M16 13h2"/></svg>
+          <span class="text-[10.5px] font-medium">Accounts</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span class="text-[10.5px] font-medium">Settings</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
