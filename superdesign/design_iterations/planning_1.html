@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ledgr — Planning</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#0F1729', navy2: '#182242', gold: '#D4A853', goldLight: '#E8C878',
+          offwhite: '#FAFAF8', accent: '#3B82F6', income: '#10B981', expense: '#EF4444',
+        },
+        fontFamily: { sans: ['Inter', 'sans-serif'] },
+        boxShadow: {
+          card: '0 1px 2px rgba(15,23,41,0.04), 0 10px 24px -10px rgba(15,23,41,0.18)',
+          phone: '0 30px 70px -15px rgba(15,23,41,0.5)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .ring-63 { background: conic-gradient(#D4A853 0% 63%, #E9E7E2 63% 100%); }
+  .ring-70 { background: conic-gradient(#D4A853 0% 70%, #E9E7E2 70% 100%); }
+  .ring-28 { background: conic-gradient(#D4A853 0% 28%, #E9E7E2 28% 100%); }
+</style>
+</head>
+<body class="bg-neutral-200 min-h-screen flex items-center justify-center p-6">
+
+  <div class="w-[390px] h-[844px] bg-offwhite rounded-[44px] overflow-hidden shadow-phone relative flex flex-col ring-1 ring-black/5">
+
+    <!-- Dynamic Island -->
+    <div class="absolute top-2.5 left-1/2 -translate-x-1/2 w-[126px] h-[34px] bg-black rounded-full z-50"></div>
+
+    <div class="flex-1 overflow-y-auto no-scrollbar pb-28">
+
+      <!-- Header (navy) -->
+      <div class="bg-navy rounded-b-[28px] pt-14 pb-6 px-6">
+        <div class="flex items-center justify-between text-white text-[15px] font-semibold mb-6 -mt-2">
+          <span>9:41</span>
+          <div class="flex items-center gap-1.5">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="0.6"/><rect x="5" y="5" width="3" height="7" rx="0.6"/><rect x="10" y="3" width="3" height="9" rx="0.6"/><rect x="15" y="0" width="3" height="12" rx="0.6"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 9.6a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6zM4.7 7a4.9 4.9 0 016.6 0L10 8.4a2.9 2.9 0 00-4 0L4.7 7zM2.1 4.4a8.4 8.4 0 0111.8 0L12.6 5.8a6.4 6.4 0 00-9.2 0L2.1 4.4z"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="white"/><rect x="2" y="2" width="18" height="8" rx="1.5" fill="white"/><rect x="22.5" y="4" width="1.5" height="4" rx="0.75" fill="white"/></svg>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 mb-6">
+          <button class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div>
+            <p class="text-white text-[19px] font-bold">Planning</p>
+            <p class="text-neutral-400 text-[12px]">August 2026</p>
+          </div>
+        </div>
+
+        <!-- Budget overview card -->
+        <div class="rounded-2xl p-5 relative overflow-hidden" style="background: linear-gradient(135deg, #182242 0%, #0F1729 60%, #0B1120 100%);">
+          <div class="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-gold/10"></div>
+          <div class="relative">
+            <p class="text-neutral-400 text-[12px] font-semibold">Monthly Budget</p>
+            <div class="flex items-end justify-between mt-2">
+              <p class="text-white text-[30px] font-extrabold tracking-tight">₹38,450</p>
+              <p class="text-neutral-400 text-[13px] mb-1">of ₹60,000</p>
+            </div>
+            <div class="mt-4 h-2.5 w-full bg-white/10 rounded-full overflow-hidden">
+              <div class="h-full rounded-full" style="width:64%; background: linear-gradient(90deg, #D4A853, #E8C878);"></div>
+            </div>
+            <p class="text-gold text-[12px] font-semibold mt-2">64% used · ₹21,550 remaining</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Budgets -->
+      <div class="px-6 mt-6">
+        <p class="text-navy text-[16px] font-bold mb-3">Category Budgets</p>
+
+        <div class="bg-white rounded-2xl shadow-card p-5 space-y-5">
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-[16px] shrink-0">🏠</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Rent / EMI</p>
+                <p class="text-[12.5px] font-bold text-navy">₹22,000 <span class="text-neutral-400 font-medium">/ ₹22,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-navy rounded-full" style="width:100%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center text-[16px] shrink-0">🍔</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Food &amp; Dining</p>
+                <p class="text-[12.5px] font-bold text-expense">₹6,240 <span class="text-neutral-400 font-medium">/ ₹6,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-expense rounded-full" style="width:100%"></div>
+            </div>
+            <p class="text-[11px] text-expense font-semibold mt-1 ml-12">Over budget by ₹240</p>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-[16px] shrink-0">🛒</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Groceries</p>
+                <p class="text-[12.5px] font-bold text-navy">₹4,120 <span class="text-neutral-400 font-medium">/ ₹5,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-gold rounded-full" style="width:82%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-[16px] shrink-0">🚗</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Transport</p>
+                <p class="text-[12.5px] font-bold text-navy">₹3,780 <span class="text-neutral-400 font-medium">/ ₹6,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-gold rounded-full" style="width:63%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-[16px] shrink-0">⚡</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Utilities</p>
+                <p class="text-[12.5px] font-bold text-navy">₹1,850 <span class="text-neutral-400 font-medium">/ ₹3,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-gold rounded-full" style="width:62%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center text-[16px] shrink-0">🛍️</div>
+              <div class="flex-1 flex items-center justify-between">
+                <p class="text-[13.5px] font-semibold text-navy">Shopping</p>
+                <p class="text-[12.5px] font-bold text-navy">₹460 <span class="text-neutral-400 font-medium">/ ₹3,000</span></p>
+              </div>
+            </div>
+            <div class="h-2 bg-neutral-100 rounded-full overflow-hidden ml-12">
+              <div class="h-full bg-gold rounded-full" style="width:15%"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Savings Goals -->
+      <div class="px-6 mt-6">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-navy text-[16px] font-bold">Savings Goals</p>
+          <span class="text-[13px] font-semibold text-accent">+ New goal</span>
+        </div>
+
+        <div class="space-y-3">
+
+          <div class="bg-white rounded-2xl shadow-card p-4 flex items-center gap-4">
+            <div class="relative w-[58px] h-[58px] shrink-0">
+              <div class="ring-63 w-full h-full rounded-full"></div>
+              <div class="absolute inset-[6px] bg-white rounded-full flex items-center justify-center">
+                <span class="text-navy text-[12px] font-extrabold">63%</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[14px] font-semibold text-navy">Emergency Fund</p>
+              <p class="text-[12px] text-neutral-400 mt-0.5">₹95,000 saved of ₹1,50,000</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-card p-4 flex items-center gap-4">
+            <div class="relative w-[58px] h-[58px] shrink-0">
+              <div class="ring-70 w-full h-full rounded-full"></div>
+              <div class="absolute inset-[6px] bg-white rounded-full flex items-center justify-center">
+                <span class="text-navy text-[12px] font-extrabold">70%</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[14px] font-semibold text-navy">Goa Trip</p>
+              <p class="text-[12px] text-neutral-400 mt-0.5">₹28,000 saved of ₹40,000</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-card p-4 flex items-center gap-4">
+            <div class="relative w-[58px] h-[58px] shrink-0">
+              <div class="ring-28 w-full h-full rounded-full"></div>
+              <div class="absolute inset-[6px] bg-white rounded-full flex items-center justify-center">
+                <span class="text-navy text-[12px] font-extrabold">28%</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[14px] font-semibold text-navy">New Laptop</p>
+              <p class="text-[12px] text-neutral-400 mt-0.5">₹22,400 saved of ₹80,000</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-neutral-100 px-6 pt-2.5 pb-8 z-40">
+      <div class="flex items-center justify-between">
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5l9-7 9 7V20a1 1 0 01-1 1h-5v-8H9v8H4a1 1 0 01-1-1V9.5z"/></svg>
+          <span class="text-[10.5px] font-medium">Home</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-4"/></svg>
+          <span class="text-[10.5px] font-medium">Insights</span>
+        </button>
+        <button class="w-14 h-14 rounded-full bg-navy flex items-center justify-center shadow-lg -mt-9 ring-[6px] ring-offwhite shrink-0">
+          <span class="text-gold text-[26px] font-light leading-none -mt-0.5">+</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1H3V7z"/><path d="M3 8h18v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/><path d="M16 13h2"/></svg>
+          <span class="text-[10.5px] font-medium">Accounts</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-neutral-400 w-12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span class="text-[10.5px] font-medium">Settings</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
