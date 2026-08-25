@@ -170,8 +170,8 @@ function BudgetsTab() {
           .eq('user_id', user.id)
           .eq('category_id', b.category_id)
           .eq('type', 'expense')
-          .gte('date', month.start)
-          .lte('date', month.end)
+          .gte('transaction_date', month.start)
+          .lte('transaction_date', month.end)
         const total = (data || []).reduce((s, t) => s + Math.abs(Number(t.amount)), 0)
         spendMap[b.category_id] = total
       }
@@ -785,6 +785,7 @@ function RecurringTab() {
         start_date: form.start_date || new Date().toISOString().split('T')[0],
         next_due_date: form.start_date || new Date().toISOString().split('T')[0],
         account_id: form.account_id || null,
+        type: 'expense',
         is_active: true,
       })
       if (error) throw error

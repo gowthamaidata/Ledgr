@@ -18,11 +18,11 @@ import { Skeleton, SkeletonRows } from '../components/Skeleton';
 import { formatINR } from '../lib/money';
 
 const ACCOUNT_TYPES = [
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'credit', label: 'Credit Card' },
   { value: 'cash', label: 'Cash' },
+  { value: 'bank', label: 'Bank' },
+  { value: 'credit_card', label: 'Credit Card' },
   { value: 'upi', label: 'UPI' },
+  { value: 'savings', label: 'Savings' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -359,7 +359,7 @@ export default function Settings() {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select('transaction_date, type, amount, party_name, notes, payment_method, categories(name), accounts(name)')
+        .select('transaction_date, type, amount, party, notes, payment_method, categories(name), accounts(name)')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false });
       if (error) throw error;
@@ -369,7 +369,7 @@ export default function Settings() {
         Type: t.type,
         Category: t.categories?.name || '',
         Amount: t.amount,
-        Party: t.party_name || '',
+        Party: t.party || '',
         Notes: t.notes || '',
         'Payment Method': t.payment_method || '',
         Account: t.accounts?.name || '',
@@ -419,13 +419,13 @@ export default function Settings() {
     if (!doubleConfirm) return;
 
     try {
-      // Server-side RPC delete_user_data would be called here in production.
-      // Since the RPC may not exist yet, we sign the user out.
-      // TODO: Implement supabase.rpc('delete_user_data') on the server
+      const { error } = await supabase.rpc('delete_user_data');
+      if (error) throw error;
       await signOut();
       toast.success('Account deleted');
     } catch (err) {
-      toast.error('Failed to delete account');
+      console.error('Delete account error:', err);
+      toast.error(err.message || 'Failed to delete account');
     }
   }
 

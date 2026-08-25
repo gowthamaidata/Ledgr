@@ -133,11 +133,13 @@ export default function Insights() {
       if (catRes.error) throw catRes.error
       if (dailyRes.error) throw dailyRes.error
 
-      // Category data
-      const rawCats = (catRes.data || []).map(c => ({
-        name: c.category_name || 'Uncategorized',
-        value: Math.abs(Number(c.total || 0)),
-      })).sort((a, b) => b.value - a.value)
+      // Category data — filter to expenses only (RPC now returns type column)
+      const rawCats = (catRes.data || [])
+        .filter(c => c.type === 'expense')
+        .map(c => ({
+          name: c.category_name || 'Uncategorized',
+          value: Math.abs(Number(c.total || 0)),
+        })).sort((a, b) => b.value - a.value)
 
       const totalSpend = rawCats.reduce((s, c) => s + c.value, 0)
 
@@ -162,18 +164,17 @@ export default function Insights() {
         amount: Math.abs(Number(d.total || 0)),
       })))
 
-      // Comparison
+      // Comparison — use type column from RPC
       const curIncome = (catRes.data || [])
-        .filter(c => Number(c.total || 0) > 0)
-        .reduce((s, c) => s + Number(c.total), 0)
+        .filter(c => c.type === 'income')
+        .reduce((s, c) => s + Math.abs(Number(c.total || 0)), 0)
       const curExpense = totalSpend
       const prevExpense = (prevCatRes.data || [])
-        .filter(c => Number(c.total || 0) <= 0)
-        .reduce((s, c) => s + Math.abs(Number(c.total)), 0) ||
-        (prevCatRes.data || []).reduce((s, c) => s + Math.abs(Number(c.total || 0)), 0)
+        .filter(c => c.type === 'expense')
+        .reduce((s, c) => s + Math.abs(Number(c.total || 0)), 0)
       const prevIncome = (prevCatRes.data || [])
-        .filter(c => Number(c.total || 0) > 0)
-        .reduce((s, c) => s + Number(c.total), 0)
+        .filter(c => c.type === 'income')
+        .reduce((s, c) => s + Math.abs(Number(c.total || 0)), 0)
 
       // Use daily totals for trend
       const dailyTotals = (dailyRes.data || []).map(d => Math.abs(Number(d.total || 0)))
@@ -217,22 +218,41 @@ export default function Insights() {
   const topMerchantMax = topMerchants.length > 0 ? topMerchants[0].value : 1
 
   /* ── Monthly trend data (last 6 months) ────────────────────────── */
-  const monthlyTrendData = (() => {
-    const data = []
-    for (let i = 5; i >= 0; i--) {
-      const m = getMonthRange(monthOffset - i)
-      const d = new Date(m.start + 'T00:00:00')
-      const label = d.toLocaleDateString('en-IN', { month: 'short' })
-      if (i === 0 && comparison) {
-        data.push({ month: label, expense: comparison.curExpense, income: comparison.curIncome })
-      } else if (i === 1 && comparison) {
-        data.push({ month: label, expense: comparison.prevExpense, income: comparison.prevIncome })
-      } else {
-        data.push({ month: label, expense: 0, income: 0 })
+  // We only have current & previous month from comparison; the rest are fetched dynamically
+  const [monthlyTrendData, setMonthlyTrendData] = useState([])
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+
+    async function fetchTrend() {
+      const data = []
+      const promises = []
+      for (let i = 5; i >= 0; i--) {
+        const m = getMonthRange(monthOffset - i)
+        const d = new Date(m.start + 'T00:00:00')
+        const label = d.toLocaleDateString('en-IN', { month: 'short' })
+        promises.push(
+          supabase.rpc('get_monthly_summary', {
+            p_year: d.getFullYear(),
+            p_month: d.getMonth() + 1,
+          }).then(res => ({
+            month: label,
+            expense: Number(res.data?.total_expenses || res.data?.total_expense || 0),
+            income: Number(res.data?.total_income || 0),
+            order: 5 - i,
+          }))
+        )
       }
+      const results = await Promise.all(promises)
+      if (cancelled) return
+      results.sort((a, b) => a.order - b.order)
+      setMonthlyTrendData(results)
     }
-    return data
-  })()
+
+    fetchTrend()
+    return () => { cancelled = true }
+  }, [user, monthOffset])
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: NAVY }}>
@@ -407,7 +427,7 @@ export default function Insights() {
               }}>
                 <BarChart3 size={18} color={GOLD} />
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
-                  Monthly Trend
+                  Daily Spending
                 </h3>
               </div>
               {dailyData.length === 0 ? (
@@ -545,7 +565,58 @@ export default function Insights() {
               )}
             </div>
 
-            {/* ── Top Merchants (progress bars) ──────────────────────────── */}
+            {/* ── Monthly Trend (6-month bar chart) ──────────────────────── */}
+            {monthlyTrendData.length > 0 && (
+              <div style={{
+                padding: 20, borderRadius: 16,
+                backgroundColor: NAVY_LIGHT,
+                border: `1px solid rgba(255,255,255,0.06)`,
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  marginBottom: 18,
+                }}>
+                  <BarChart3 size={18} color={GOLD} />
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                    Monthly Trend
+                  </h3>
+                </div>
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyTrendData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}K` : v}
+                      />
+                      <Tooltip content={<CustomTooltip type="bar" />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar dataKey="expense" fill={EXPENSE_RED} radius={[3, 3, 0, 0]} name="Expenses" />
+                      <Bar dataKey="income" fill={INCOME_GREEN} radius={[3, 3, 0, 0]} name="Income" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Legend */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: EXPENSE_RED }} />
+                    Expenses
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: INCOME_GREEN }} />
+                    Income
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Top Spending (progress bars) ──────────────────────────── */}
             {topMerchants.length > 0 && (
               <div style={{
                 padding: 20, borderRadius: 16,
@@ -558,7 +629,7 @@ export default function Insights() {
                 }}>
                   <ArrowUpDown size={18} color={GOLD} />
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
-                    Top Merchants
+                    Top Spending
                   </h3>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

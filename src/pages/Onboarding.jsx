@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Wallet, Sparkles, CheckCircle2, Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { supabase } from '../lib/supabase'
 import Button from '../components/Button'
 
 const pageStyle = {
@@ -219,6 +220,20 @@ export default function Onboarding() {
   async function handleFinish() {
     setLoading(true)
     try {
+      // Save enabled accounts to DB
+      const enabledAccounts = accounts.filter(a => a.enabled)
+      if (enabledAccounts.length > 0) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        const rows = enabledAccounts.map(a => ({
+          user_id: currentUser.id,
+          name: a.name,
+          type: a.id === 'credit_card' ? 'credit_card' : a.id === 'bank' ? 'bank' : a.id === 'upi' ? 'bank' : 'cash',
+          balance: 0,
+        }))
+        const { error: accError } = await supabase.from('accounts').insert(rows)
+        if (accError) console.error('Account insert error:', accError)
+      }
+
       await updateProfile({ onboarding_completed: true })
       navigate('/')
     } catch (err) {

@@ -27,12 +27,31 @@ export default function DailyReview() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reviewed, setReviewed] = useState(false)
+  const [reviewedDates, setReviewedDates] = useState(new Set())
 
   const isToday = selectedDate === todayISO()
   const isFuture = selectedDate > todayISO()
 
+  // Load reviewed dates from profile on mount
   useEffect(() => {
-    setReviewed(false)
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('reviewed_dates')
+        .eq('id', user.id)
+        .single();
+      if (data?.reviewed_dates) {
+        setReviewedDates(new Set(data.reviewed_dates));
+      }
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    setReviewed(reviewedDates.has(selectedDate))
+  }, [selectedDate, reviewedDates])
+
+  useEffect(() => {
     let mounted = true
 
     async function load() {
@@ -467,7 +486,23 @@ export default function DailyReview() {
               <Button
                 variant="primary"
                 icon={CheckCircle}
-                onClick={() => setReviewed(true)}
+                onClick={async () => {
+                  const newDates = new Set(reviewedDates);
+                  newDates.add(selectedDate);
+                  // Keep only last 90 dates to avoid unbounded growth
+                  const sorted = [...newDates].sort().slice(-90);
+                  const newSet = new Set(sorted);
+                  setReviewedDates(newSet);
+                  setReviewed(true);
+                  try {
+                    await supabase
+                      .from('profiles')
+                      .update({ reviewed_dates: sorted })
+                      .eq('id', user.id);
+                  } catch (err) {
+                    console.error('Failed to save review state:', err);
+                  }
+                }}
               >
                 Mark as reviewed
               </Button>

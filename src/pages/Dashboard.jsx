@@ -124,6 +124,7 @@ export default function Dashboard() {
   const [monthlySummary, setMonthlySummary] = useState(null);
   const [recentTxns, setRecentTxns] = useState(null);
   const [topCategories, setTopCategories] = useState(null);
+  const [totalBudget, setTotalBudget] = useState(0);
   const [error, setError] = useState(null);
 
   /* ── Data fetching (preserved exactly) ──────────────────────── */
@@ -133,7 +134,7 @@ export default function Dashboard() {
 
     async function fetchData() {
       try {
-        const [todayRes, monthlyRes, txnRes] = await Promise.all([
+        const [todayRes, monthlyRes, txnRes, budgetRes] = await Promise.all([
           supabase.rpc('get_today_summary'),
           supabase.rpc('get_monthly_summary'),
           supabase
@@ -142,6 +143,7 @@ export default function Dashboard() {
             .order('transaction_date', { ascending: false })
             .order('created_at', { ascending: false })
             .limit(5),
+          supabase.from('budgets').select('amount'),
         ]);
 
         if (cancelled) return;
@@ -153,6 +155,10 @@ export default function Dashboard() {
         setTodaySummary(todayRes.data);
         setMonthlySummary(monthlyRes.data);
         setRecentTxns(txnRes.data || []);
+
+        // Sum user's budgets for the budget bar
+        const budgetTotal = (budgetRes.data || []).reduce((s, b) => s + Number(b.amount || 0), 0);
+        setTotalBudget(budgetTotal);
 
         // Fetch monthly transactions for top categories
         const now = new Date();
@@ -208,7 +214,7 @@ export default function Dashboard() {
   const monthlyExpense = Number(monthlySummary?.total_expenses || monthlySummary?.total_expense || 0);
   const monthlySavings = monthlyIncome - monthlyExpense;
   const monthlyBalance = monthlyIncome - monthlyExpense;
-  const budget = 60000;
+  const budget = totalBudget;
   const progressPct = budget > 0 ? Math.min((monthlyExpense / budget) * 100, 100) : 0;
   const displayName = profile?.full_name || 'there';
 

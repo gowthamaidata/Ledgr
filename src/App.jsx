@@ -56,7 +56,7 @@ class ErrorBoundary extends Component {
               padding: '0.625rem 1.25rem',
               borderRadius: '0.5rem',
               border: 'none',
-              backgroundColor: 'var(--color-primary, #059669)',
+              backgroundColor: 'var(--color-primary, #0F1729)',
               color: '#fff',
               fontSize: '0.875rem',
               fontWeight: 600,
@@ -75,11 +75,18 @@ class ErrorBoundary extends Component {
 
 function AppLayout() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [editTransaction, setEditTransaction] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleQuickAddSave = useCallback(() => {
     setQuickAddOpen(false);
+    setEditTransaction(null);
     setRefreshKey((k) => k + 1);
+  }, []);
+
+  const handleEditTransaction = useCallback((tx) => {
+    setEditTransaction(tx);
+    setQuickAddOpen(true);
   }, []);
 
   useEffect(() => {
@@ -107,7 +114,7 @@ function AppLayout() {
       <Layout onQuickAdd={() => setQuickAddOpen(true)} refreshKey={refreshKey}>
         <Routes>
           <Route index element={<Dashboard refreshKey={refreshKey} />} />
-          <Route path="transactions" element={<Transactions refreshKey={refreshKey} />} />
+          <Route path="transactions" element={<Transactions refreshKey={refreshKey} onEditTransaction={handleEditTransaction} />} />
           <Route path="daily-review" element={<DailyReview />} />
           <Route path="insights" element={<Insights />} />
           <Route path="planning" element={<Planning />} />
@@ -117,8 +124,9 @@ function AppLayout() {
       </Layout>
       <QuickAdd
         open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        onSave={handleQuickAddSave}
+        onClose={() => { setQuickAddOpen(false); setEditTransaction(null); }}
+        onSaved={handleQuickAddSave}
+        editTransaction={editTransaction}
       />
     </>
   );

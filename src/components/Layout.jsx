@@ -142,7 +142,7 @@ export default function Layout({ onQuickAdd }) {
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--surface, #ffffff)',
     borderTop: '1px solid var(--border)',
     display: 'flex',
     justifyContent: 'space-around',

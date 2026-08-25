@@ -16,8 +16,10 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
   const [type, setType] = useState('expense');
   const [categoryId, setCategoryId] = useState('');
   const [party, setParty] = useState('');
+  const [notes, setNotes] = useState('');
   const [transactionDate, setTransactionDate] = useState(todayISO());
   const [accountId, setAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [saving, setSaving] = useState(false);
 
@@ -33,6 +35,7 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
       setType(editTransaction.type || 'expense');
       setCategoryId(editTransaction.category_id || '');
       setParty(editTransaction.party || '');
+      setNotes(editTransaction.notes || '');
       setTransactionDate(editTransaction.transaction_date || todayISO());
       setAccountId(editTransaction.account_id || '');
       setPaymentMethod(editTransaction.payment_method || 'upi');
@@ -41,6 +44,7 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
       setType('expense');
       setCategoryId('');
       setParty('');
+      setNotes('');
       setTransactionDate(todayISO());
       setAccountId('');
       setPaymentMethod('upi');
@@ -96,7 +100,7 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
       toast.error('Enter a valid amount');
       return;
     }
-    if (!categoryId) {
+    if (type !== 'transfer' && !categoryId) {
       toast.error('Select a category');
       return;
     }
@@ -104,54 +108,96 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
       toast.error('Select an account');
       return;
     }
+    if (type === 'transfer' && !toAccountId) {
+      toast.error('Select a destination account');
+      return;
+    }
+    if (type === 'transfer' && accountId === toAccountId) {
+      toast.error('From and To accounts must be different');
+      return;
+    }
 
     setSaving(true);
 
     try {
-      const txData = {
-        user_id: user.id,
-        category_id: categoryId,
-        account_id: accountId,
-        type,
-        amount: String(Number(amount)),
-        party: party.trim() || null,
-        notes: null,
-        transaction_date: transactionDate,
-        payment_method: paymentMethod,
-      };
+      if (type === 'transfer' && !editTransaction) {
+        // Transfer creates two transactions: expense from source, income to destination
+        // Find or use a "Transfer" category if available, otherwise use "Other"
+        let transferCatId = null;
+        const otherExpenseCat = categories?.find(c => c.name === 'Other' && c.type === 'expense');
+        const otherIncomeCat = categories?.find(c => c.name === 'Other' && c.type === 'income');
 
-      if (editTransaction) {
-        // Update existing
-        const { error } = await supabase
-          .from('transactions')
-          .update(txData)
-          .eq('id', editTransaction.id);
+        const parsedAmount = parseFloat(amount);
+        const txBase = {
+          user_id: user.id,
+          transaction_date: transactionDate,
+          payment_method: paymentMethod,
+          party: party.trim() || 'Transfer',
+          notes: notes.trim() || null,
+        };
 
+        const rows = [
+          {
+            ...txBase,
+            type: 'expense',
+            amount: parsedAmount,
+            account_id: accountId,
+            category_id: otherExpenseCat?.id || categoryId,
+          },
+          {
+            ...txBase,
+            type: 'income',
+            amount: parsedAmount,
+            account_id: toAccountId,
+            category_id: otherIncomeCat?.id || categoryId,
+          },
+        ];
+
+        const { error } = await supabase.from('transactions').insert(rows);
         if (error) throw error;
-        toast.success('Transaction updated');
+        toast.success('Transfer recorded');
       } else {
-        // Check for duplicates
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const { data: recentTxns } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('created_at', fiveMinAgo)
-          .order('created_at', { ascending: false });
+        const txData = {
+          user_id: user.id,
+          category_id: categoryId,
+          account_id: accountId,
+          type,
+          amount: parseFloat(amount),
+          party: party.trim() || null,
+          notes: notes.trim() || null,
+          transaction_date: transactionDate,
+          payment_method: paymentMethod,
+        };
 
-        const newTx = { ...txData, created_at: new Date().toISOString() };
-        const duplicate = findLikelyDuplicate(newTx, recentTxns || []);
+        if (editTransaction) {
+          const { error } = await supabase
+            .from('transactions')
+            .update(txData)
+            .eq('id', editTransaction.id);
 
-        if (duplicate) {
-          toast.warn('Possible duplicate detected, but transaction was saved');
-        }
+          if (error) throw error;
+          toast.success('Transaction updated');
+        } else {
+          const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+          const { data: recentTxns } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('created_at', fiveMinAgo)
+            .order('created_at', { ascending: false });
 
-        // Insert
-        const { error } = await supabase.from('transactions').insert(txData);
+          const newTx = { ...txData, created_at: new Date().toISOString() };
+          const duplicate = findLikelyDuplicate(newTx, recentTxns || []);
 
-        if (error) throw error;
-        if (!duplicate) {
-          toast.success('Transaction added');
+          if (duplicate) {
+            toast.warn('Possible duplicate detected, but transaction was saved');
+          }
+
+          const { error } = await supabase.from('transactions').insert(txData);
+          if (error) throw error;
+          if (!duplicate) {
+            toast.success('Transaction added');
+          }
         }
       }
 
@@ -330,8 +376,8 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
             </div>
           </div>
 
-          {/* Category Picker */}
-          <div style={{ marginBottom: '24px' }}>
+          {/* Category Picker (hidden for transfer) */}
+          {type !== 'transfer' && <div style={{ marginBottom: '24px' }}>
             <label
               style={{
                 display: 'block',
@@ -397,7 +443,53 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
                 })}
               </div>
             )}
-          </div>
+          </div>}
+
+          {/* Transfer: To Account Picker */}
+          {type === 'transfer' && accounts && accounts.length > 1 && (
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  marginBottom: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                To Account
+              </label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {accounts.filter(a => a.id !== accountId).map((acc) => {
+                  const isSelected = toAccountId === acc.id;
+                  return (
+                    <button
+                      key={acc.id}
+                      onClick={() => setToAccountId(acc.id)}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        borderRadius: '100px',
+                        border: isSelected
+                          ? '2px solid var(--income)'
+                          : '1.5px solid var(--border)',
+                        backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.08)' : 'var(--surface)',
+                        color: isSelected ? 'var(--income)' : 'var(--text-primary)',
+                        fontWeight: isSelected ? 600 : 400,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {acc.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Merchant / Note */}
           <div style={{ marginBottom: '20px' }}>
@@ -419,6 +511,44 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
               value={party}
               onChange={(e) => setParty(e.target.value)}
               placeholder="e.g. Swiggy, Amazon"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '15px',
+                fontFamily: 'inherit',
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg, #F9FAFB)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s ease',
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+            />
+          </div>
+
+          {/* Notes */}
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Notes
+            </label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add a note (optional)"
               style={{
                 width: '100%',
                 padding: '12px 16px',
@@ -487,7 +617,7 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
                 letterSpacing: '0.5px',
               }}
             >
-              Account
+              {type === 'transfer' ? 'From Account' : 'Account'}
             </label>
             {!accounts ? (
               <div style={{ display: 'flex', gap: '8px' }}>
