@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis,
 } from 'recharts'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, PieChart as PieChartIcon, BarChart3, ArrowUpDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, PieChart as PieChartIcon, BarChart3, ArrowUpDown, Download, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -14,6 +14,7 @@ import { Card, CardHeader } from '../components/Card'
 import { Skeleton, SkeletonCards } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 import { DEFAULT_CATEGORY_COLORS, CATEGORY_ICONS } from '../lib/constants'
+import { exportChartAsPng, chartFileName } from '../lib/chartExport'
 
 /* ── Premium palette ─────────────────────────────────────────────── */
 const NAVY = '#0F1729'
@@ -254,8 +255,61 @@ export default function Insights() {
     return () => { cancelled = true }
   }, [user, monthOffset])
 
+  /* ── Chart refs for PNG export ─────────────────────────────────── */
+  const dailyChartRef     = useRef(null)
+  const categoryChartRef  = useRef(null)
+  const trendChartRef     = useRef(null)
+  const [exportingChart, setExportingChart] = useState(null) // chart id being exported
+
+  const periodLabel = (() => {
+    const d = new Date((month?.start || '') + 'T00:00:00')
+    return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+  })()
+
+  async function handleChartExport(chartId, ref, name) {
+    if (exportingChart) return
+    setExportingChart(chartId)
+    try {
+      await exportChartAsPng(ref.current, chartFileName(name, periodLabel), { bg: '#1A2540', scale: 2.5 })
+    } catch (err) {
+      console.error('Chart export error:', err)
+      toast.error('Could not export chart — try again')
+    } finally {
+      setExportingChart(null)
+    }
+  }
+
+  /* Reusable download icon button for chart cards */
+  function ChartDownloadBtn({ chartId, chartRef, chartName }) {
+    const isExporting = exportingChart === chartId
+    return (
+      <button
+        onClick={() => handleChartExport(chartId, chartRef, chartName)}
+        disabled={!!exportingChart}
+        title={`Download ${chartName} as PNG`}
+        aria-label={`Download ${chartName} as PNG`}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 28, height: 28, borderRadius: 8, border: 'none',
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          color: isExporting ? GOLD : 'rgba(255,255,255,0.5)',
+          cursor: exportingChart ? 'not-allowed' : 'pointer',
+          opacity: exportingChart && !isExporting ? 0.4 : 1,
+          transition: 'all 0.15s', flexShrink: 0,
+        }}
+        onMouseEnter={e => { if (!exportingChart) { e.currentTarget.style.backgroundColor = 'rgba(212,168,83,0.15)'; e.currentTarget.style.color = GOLD } }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = isExporting ? GOLD : 'rgba(255,255,255,0.5)' }}
+      >
+        {isExporting
+          ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+          : <Download size={13} />}
+      </button>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: NAVY }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       {/* ── Navy header bar ─────────────────────────────────────────── */}
       <div style={{
         background: `linear-gradient(135deg, ${NAVY} 0%, ${NAVY_MID} 100%)`,
@@ -415,20 +469,20 @@ export default function Insights() {
               </div>
             </div>
 
-            {/* ── Monthly Trend (Bar chart) ──────────────────────────────── */}
+            {/* ── Daily Spending (Bar chart) ─────────────────────────────── */}
             <div style={{
               padding: 20, borderRadius: 16,
               backgroundColor: NAVY_LIGHT,
               border: `1px solid rgba(255,255,255,0.06)`,
             }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                marginBottom: 18,
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
                 <BarChart3 size={18} color={GOLD} />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff', flex: 1 }}>
                   Daily Spending
                 </h3>
+                {dailyData.length > 0 && (
+                  <ChartDownloadBtn chartId="daily" chartRef={dailyChartRef} chartName="Daily-Spending" />
+                )}
               </div>
               {dailyData.length === 0 ? (
                 <EmptyState
@@ -437,7 +491,7 @@ export default function Insights() {
                   description="No expenses recorded for this month yet."
                 />
               ) : (
-                <div style={{ width: '100%', height: 200 }}>
+                <div ref={dailyChartRef} style={{ width: '100%', height: 200 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
                       <XAxis
@@ -470,14 +524,14 @@ export default function Insights() {
               backgroundColor: NAVY_LIGHT,
               border: `1px solid rgba(255,255,255,0.06)`,
             }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                marginBottom: 18,
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
                 <PieChartIcon size={18} color={GOLD} />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff', flex: 1 }}>
                   Spending by Category
                 </h3>
+                {categoryData.length > 0 && (
+                  <ChartDownloadBtn chartId="category" chartRef={categoryChartRef} chartName="Spending-by-Category" />
+                )}
               </div>
               {categoryData.length === 0 ? (
                 <EmptyState
@@ -487,7 +541,7 @@ export default function Insights() {
                 />
               ) : (
                 <>
-                  <div style={{ width: '100%', height: 220, position: 'relative' }}>
+                  <div ref={categoryChartRef} style={{ width: '100%', height: 220, position: 'relative' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -572,16 +626,14 @@ export default function Insights() {
                 backgroundColor: NAVY_LIGHT,
                 border: `1px solid rgba(255,255,255,0.06)`,
               }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  marginBottom: 18,
-                }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
                   <BarChart3 size={18} color={GOLD} />
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff', flex: 1 }}>
                     Monthly Trend
                   </h3>
+                  <ChartDownloadBtn chartId="trend" chartRef={trendChartRef} chartName="Monthly-Trend" />
                 </div>
-                <div style={{ width: '100%', height: 200 }}>
+                <div ref={trendChartRef} style={{ width: '100%', height: 200 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyTrendData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
                       <XAxis

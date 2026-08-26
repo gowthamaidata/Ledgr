@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, PlusCircle, Trash2, FileDown, Loader2 } from 'lucide-react'
+import { downloadTransactionPdf } from '../lib/pdfExport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -73,6 +74,7 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
   const [monthOffset, setMonthOffset] = useState(0)
   const [showFilters, setShowFilters] = useState(true)
   const [localRefresh, setLocalRefresh] = useState(0)
+  const [pdfExporting, setPdfExporting] = useState(false)
 
   const monthRange = getMonthRange(monthOffset)
 
@@ -204,6 +206,68 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
     }
   }
 
+  /* ── PDF Export ──────────────────────────────────────── */
+  const handlePdfExport = async () => {
+    if (pdfExporting) return
+    setPdfExporting(true)
+    try {
+      // Fetch ALL matching transactions (no page limit) for the PDF
+      let query = supabase
+        .from('transactions')
+        .select('*, categories(name, icon, color)')
+        .eq('user_id', user.id)
+        .gte('transaction_date', monthRange.start)
+        .lte('transaction_date', monthRange.end)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(5000) // safety cap
+
+      if (searchDebounced.trim()) {
+        query = query.or(`party.ilike.%${searchDebounced}%,notes.ilike.%${searchDebounced}%`)
+      }
+      if (typeFilter !== 'all') {
+        query = query.eq('type', typeFilter)
+      }
+
+      const { data: allTx, error } = await query
+      if (error) throw error
+      if (!allTx || allTx.length === 0) {
+        toast.info('No transactions to export for the selected filters')
+        return
+      }
+
+      const totalIncome   = allTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+      const totalExpense  = allTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+      const totalTransfer = allTx.filter(t => t.type === 'transfer').reduce((s, t) => s + Number(t.amount), 0)
+
+      // Build a nice date-range label
+      const startDate = new Date(monthRange.start + 'T00:00:00')
+      const endDate   = new Date(monthRange.end + 'T00:00:00')
+      const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()
+      const dateRangeLabel = sameMonth
+        ? startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+        : `${startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} – ${endDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+
+      const monthStr = startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }).replace(' ', '-')
+      const typeStr  = typeFilter !== 'all' ? `-${typeFilter}` : ''
+      const fileName = `Ledgr-Transactions-${monthStr}${typeStr}.pdf`
+
+      downloadTransactionPdf({
+        transactions: allTx,
+        userName: user?.email || 'User',
+        dateRangeLabel,
+        monthLabel: monthRange.label,
+        summary: { totalIncome, totalExpense, totalTransfer, count: allTx.length },
+        fileName,
+      })
+    } catch (err) {
+      console.error('PDF export error:', err)
+      toast.error('Failed to generate PDF report')
+    } finally {
+      setPdfExporting(false)
+    }
+  }
+
   const groups = groupByDate(transactions)
 
   return (
@@ -224,27 +288,47 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
         }}>
           Transactions
         </h1>
-        <button
-          onClick={() => setShowFilters(prev => !prev)}
-          style={{
-            padding: '8px 18px',
-            fontSize: '13px',
-            fontWeight: 600,
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: 'var(--navy, #0F1729)',
-            color: '#fff',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            letterSpacing: '0.2px',
-            transition: 'opacity 0.15s ease',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-        >
-          Filter
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* PDF Export button */}
+          <button
+            onClick={handlePdfExport}
+            disabled={pdfExporting}
+            title="Download transaction report as PDF"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', fontSize: '13px', fontWeight: 600,
+              borderRadius: '10px', border: '1.5px solid var(--border)',
+              backgroundColor: 'var(--surface)', color: 'var(--text-primary)',
+              cursor: pdfExporting ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', opacity: pdfExporting ? 0.6 : 1,
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={e => { if (!pdfExporting) e.currentTarget.style.backgroundColor = 'var(--bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--surface)' }}
+          >
+            {pdfExporting
+              ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              : <FileDown size={14} />}
+            {pdfExporting ? 'Preparing…' : 'PDF'}
+          </button>
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters(prev => !prev)}
+            style={{
+              padding: '8px 18px', fontSize: '13px', fontWeight: 600,
+              borderRadius: '10px', border: 'none',
+              backgroundColor: 'var(--navy, #0F1729)', color: '#fff',
+              cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'opacity 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+          >
+            {showFilters ? 'Hide Filters' : 'Filter'}
+          </button>
+        </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
       {/* Search bar */}
       <div style={{
