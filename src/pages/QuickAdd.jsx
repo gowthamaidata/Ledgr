@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -11,34 +12,51 @@ const NAVY = '#0F1729';
 const GOLD = '#D4A853';
 
 const TRANSACTION_TYPES = [
-  { value: 'expense', label: 'Expense', color: '#EF4444' },
-  { value: 'income',  label: 'Income',  color: '#10B981' },
-  { value: 'transfer',label: 'Transfer', color: '#3B82F6' },
+  { value: 'expense',  label: 'Expense',  color: '#EF4444' },
+  { value: 'income',   label: 'Income',   color: '#10B981' },
+  { value: 'transfer', label: 'Transfer', color: '#3B82F6' },
 ];
+
+/* ── Note placeholder per type ── */
+function notePlaceholder(type) {
+  if (type === 'expense')  return 'e.g. Lunch with colleagues, monthly grocery run';
+  if (type === 'income')   return 'e.g. August salary, freelance payment';
+  if (type === 'transfer') return 'e.g. Moving funds to savings';
+  return 'Add a note…';
+}
+
+/* ── Resolve icon: DB stores Lucide names for old rows, emojis for new ones.
+      Always prefer CATEGORY_ICONS[name] (emoji), fall back to stored icon  ── */
+function resolveIcon(cat) {
+  const emoji = CATEGORY_ICONS[cat.name];
+  if (emoji) return emoji;
+  // If stored icon is already an emoji (>1 byte), use it
+  if (cat.icon && cat.icon.length <= 6 && /\p{Emoji}/u.test(cat.icon)) return cat.icon;
+  return null; // lucide string names we just hide
+}
 
 export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
   const { user } = useAuth();
   const toast = useToast();
   const amountRef = useRef(null);
-  const sheetRef = useRef(null);
 
-  /* ── Form state ─── */
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState('expense');
-  const [categoryId, setCategoryId] = useState('');
-  const [party, setParty] = useState('');
-  const [notes, setNotes] = useState('');
-  const [date, setDate] = useState(todayISO());
-  const [accountId, setAccountId] = useState('');
+  /* ── Form state ── */
+  const [amount, setAmount]           = useState('');
+  const [type, setType]               = useState('expense');
+  const [categoryId, setCategoryId]   = useState('');
+  const [party, setParty]             = useState('');
+  const [notes, setNotes]             = useState('');
+  const [date, setDate]               = useState(todayISO());
+  const [accountId, setAccountId]     = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]           = useState(false);
 
-  /* ── Data ─── */
+  /* ── Remote data ── */
   const [categories, setCategories] = useState(null);
-  const [accounts, setAccounts] = useState(null);
+  const [accounts, setAccounts]     = useState(null);
 
-  /* ── Reset on open ─── */
+  /* ── Reset form on open ── */
   useEffect(() => {
     if (!open) return;
     if (editTransaction) {
@@ -64,83 +82,117 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
     setTimeout(() => amountRef.current?.focus(), 120);
   }, [open, editTransaction]);
 
-  /* ── Fetch data ─── */
+  /* ── Fetch categories + accounts ── */
   useEffect(() => {
     if (!open || !user) return;
     let cancelled = false;
     async function load() {
       const [catRes, accRes] = await Promise.all([
-        supabase.from('categories').select('*').eq('user_id', user.id).eq('is_active', true).order('usage_count', { ascending: false }),
-        supabase.from('accounts').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('usage_count', { ascending: false }),
+        supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('sort_order'),
       ]);
       if (cancelled) return;
       if (!catRes.error) setCategories(catRes.data || []);
       if (!accRes.error) {
         const accs = accRes.data || [];
         setAccounts(accs);
-        if (!accountId && accs.length > 0 && !editTransaction) setAccountId(accs[0].id);
+        if (!accountId && accs.length > 0 && !editTransaction) {
+          setAccountId(accs[0].id);
+        }
       }
     }
     load();
     return () => { cancelled = true; };
   }, [open, user]);
 
-  /* ── Filtered categories ─── */
-  const filteredCats = categories?.filter(c => type === 'income' ? c.type === 'income' : c.type === 'expense') || [];
+  /* ── Derived ── */
+  const filteredCats = categories?.filter(c =>
+    type === 'income' ? c.type === 'income' : c.type === 'expense'
+  ) || [];
 
-  /* ── Validation ─── */
+  const activeType = TRANSACTION_TYPES.find(t => t.value === type);
+  const isTransfer = type === 'transfer';
+  const isIncome   = type === 'income';
+  const accentColor = activeType?.color || NAVY;
+
+  /* ── Validation ── */
   function validate() {
     const amt = parseFloat(amount);
-    if (!amount || isNaN(amt) || amt <= 0) { toast.error('Enter a valid amount'); return false; }
-    if (type !== 'transfer' && !categoryId) { toast.error('Select a category'); return false; }
-    if (!accountId) { toast.error('Select an account'); return false; }
-    if (type === 'transfer') {
-      if (!toAccountId) { toast.error('Select a destination account'); return false; }
+    if (!amount || isNaN(amt) || amt <= 0) {
+      toast.error('Enter a valid amount'); return false;
+    }
+    if (!isTransfer && !categoryId) {
+      toast.error(isIncome ? 'Select an income source' : 'Select a category'); return false;
+    }
+    if (!accountId) {
+      toast.error('Select an account'); return false;
+    }
+    if (isTransfer) {
+      if (!toAccountId) { toast.error('Select destination account'); return false; }
       if (accountId === toAccountId) { toast.error('From and To accounts must be different'); return false; }
     }
     return true;
   }
 
-  /* ── Save ─── */
+  /* ── Save ── */
   async function handleSave() {
     if (!validate()) return;
     setSaving(true);
     try {
       const parsedAmount = parseFloat(amount);
 
-      if (type === 'transfer' && !editTransaction) {
-        const txData = {
-          user_id: user.id, account_id: accountId,
+      if (isTransfer && !editTransaction) {
+        const { error } = await supabase.from('transactions').insert({
+          user_id: user.id,
+          account_id: accountId,
           transfer_to_account_id: toAccountId,
-          type: 'transfer', amount: parsedAmount,
-          party: party.trim() || null, notes: notes.trim() || null,
-          transaction_date: date, payment_method: paymentMethod,
+          type: 'transfer',
+          amount: parsedAmount,
+          party: party.trim() || null,
+          notes: notes.trim() || null,
+          transaction_date: date,
+          payment_method: paymentMethod,
           category_id: null,
-        };
-        const { error } = await supabase.from('transactions').insert(txData);
+        });
         if (error) throw error;
         toast.success('Transfer recorded');
       } else {
         const txData = {
-          user_id: user.id, category_id: categoryId || null,
-          account_id: accountId, type,
+          user_id: user.id,
+          category_id: categoryId || null,
+          account_id: accountId,
+          type,
           amount: parsedAmount,
-          party: party.trim() || null, notes: notes.trim() || null,
-          transaction_date: date, payment_method: paymentMethod,
+          party: party.trim() || null,
+          notes: notes.trim() || null,
+          transaction_date: date,
+          payment_method: paymentMethod,
         };
         if (editTransaction) {
-          const { error } = await supabase.from('transactions').update(txData).eq('id', editTransaction.id).eq('user_id', user.id);
+          const { error } = await supabase
+            .from('transactions').update(txData)
+            .eq('id', editTransaction.id).eq('user_id', user.id);
           if (error) throw error;
           toast.success('Transaction updated');
         } else {
-          // Duplicate check
           const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-          const { data: recentTxns } = await supabase.from('transactions').select('*').eq('user_id', user.id).gte('created_at', fiveMinAgo).order('created_at', { ascending: false });
-          const newTx = { ...txData, created_at: new Date().toISOString() };
-          const dup = findLikelyDuplicate(newTx, recentTxns || []);
+          const { data: recent } = await supabase
+            .from('transactions').select('*')
+            .eq('user_id', user.id).gte('created_at', fiveMinAgo);
+          const dup = findLikelyDuplicate({ ...txData, created_at: new Date().toISOString() }, recent || []);
           const { error } = await supabase.from('transactions').insert(txData);
           if (error) throw error;
-          toast.success(dup ? 'Saved (possible duplicate detected)' : 'Transaction added');
+          toast.success(dup ? 'Saved (possible duplicate)' : 'Transaction added');
         }
       }
       onSaved?.();
@@ -155,132 +207,212 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
 
   if (!open) return null;
 
-  const activeType = TRANSACTION_TYPES.find(t => t.value === type);
-  const isTransfer = type === 'transfer';
-
-  /* ── Label helpers ─── */
-  const partyLabel = type === 'expense' ? 'Merchant' : type === 'income' ? 'Source' : 'Note';
-  const partyPlaceholder = type === 'expense' ? 'e.g. Swiggy, DMart, Apollo' : type === 'income' ? 'e.g. Employer, Bank' : 'Transfer note';
-  const catLabel = type === 'income' ? 'Income Source' : 'Category';
-
-  const fieldLabel = (text) => ({
-    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
-    marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.6px',
-  });
-
+  /* ── Styles ── */
+  const label = {
+    display: 'block', fontSize: 11, fontWeight: 700,
+    color: 'var(--text-muted)', marginBottom: 8,
+    textTransform: 'uppercase', letterSpacing: '0.6px',
+  };
+  const optionalSpan = {
+    textTransform: 'none', color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4,
+  };
   const inputStyle = {
     width: '100%', padding: '12px 14px', fontSize: 15, fontFamily: 'inherit',
     color: 'var(--text-primary)', backgroundColor: 'var(--bg)',
     border: '1.5px solid var(--border)', borderRadius: 12, outline: 'none',
-    boxSizing: 'border-box', transition: 'border-color 0.2s',
+    boxSizing: 'border-box', transition: 'border-color 0.18s',
   };
-
-  const chipStyle = (selected) => ({
+  const chip = (selected) => ({
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '8px 14px', fontSize: 13, fontFamily: 'inherit',
-    borderRadius: 100, border: selected ? `2px solid ${activeType?.color || 'var(--accent)'}` : '1.5px solid var(--border)',
-    backgroundColor: selected ? `${activeType?.color}14` : 'var(--surface)',
-    color: selected ? (activeType?.color || 'var(--accent)') : 'var(--text-secondary)',
-    fontWeight: selected ? 600 : 400, cursor: 'pointer',
-    transition: 'all 0.15s', whiteSpace: 'nowrap',
+    borderRadius: 100, cursor: 'pointer', whiteSpace: 'nowrap',
+    transition: 'all 0.15s', border: 'none',
+    backgroundColor: selected ? `${accentColor}18` : 'var(--bg)',
+    color: selected ? accentColor : 'var(--text-secondary)',
+    fontWeight: selected ? 700 : 400,
+    outline: selected ? `2px solid ${accentColor}` : '1.5px solid var(--border)',
+    outlineOffset: selected ? 0 : 0,
   });
+
+  /* ── Party field config ── */
+  const partyLabel       = isIncome ? 'Source' : 'Merchant';
+  const partyPlaceholder = isIncome
+    ? 'e.g. Employer, client name, bank'
+    : 'e.g. Swiggy, DMart, Apollo, Zara';
 
   return (
     <>
-      {/* Overlay */}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998, animation: 'qaoIn 0.2s ease-out' }} />
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9998,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          animation: 'qaBdIn 0.2s ease-out',
+        }}
+      />
 
       {/* Sheet */}
-      <div ref={sheetRef} style={{
+      <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-        backgroundColor: 'var(--surface)', borderRadius: '24px 24px 0 0',
+        backgroundColor: 'var(--surface)',
+        borderRadius: '24px 24px 0 0',
         maxHeight: '94vh', overflowY: 'auto',
-        animation: 'qaoUp 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
-        boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+        animation: 'qaSheetUp 0.28s cubic-bezier(0.32,0.72,0,1)',
       }}>
         <style>{`
-          @keyframes qaoUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
-          @keyframes qaoIn { from { opacity: 0 } to { opacity: 1 } }
-          .qa-input:focus { border-color: var(--accent) !important; }
+          @keyframes qaSheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+          @keyframes qaBdIn    { from{opacity:0} to{opacity:1} }
+          .qa-input:focus { border-color: ${accentColor} !important; }
         `}</style>
 
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 2 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'var(--border)' }} />
+        {/* ── Sheet header: drag handle + title + close ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px 0',
+        }}>
+          {/* Left spacer = same width as close button so title stays centred */}
+          <div style={{ width: 36, height: 36 }} />
+
+          {/* Drag handle centred above title */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'var(--border)' }} />
+          </div>
+
+          {/* Close (×) button — top-right */}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 36, height: 36, borderRadius: 12, border: 'none',
+              backgroundColor: 'var(--bg)', color: 'var(--text-muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--border)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg)'}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div style={{ padding: '8px 24px 40px' }}>
+        <div style={{ padding: '12px 24px 44px' }}>
+
           {/* Title */}
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 22 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, textAlign: 'center' }}>
             {editTransaction ? 'Edit Transaction' : 'Add Transaction'}
           </div>
 
-          {/* Type selector */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {TRANSACTION_TYPES.map(t => {
-                const isActive = type === t.value;
-                return (
-                  <button key={t.value} onClick={() => { setType(t.value); setCategoryId(''); }}
-                    style={{ flex: 1, padding: '11px 8px', border: 'none', borderRadius: 100, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: isActive ? t.color : 'var(--bg)', color: isActive ? '#fff' : 'var(--text-muted)' }}>
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
+          {/* ── Type toggle ── */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            {TRANSACTION_TYPES.map(t => {
+              const active = type === t.value;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => { setType(t.value); setCategoryId(''); }}
+                  style={{
+                    flex: 1, padding: '11px 8px', border: 'none', borderRadius: 100,
+                    fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    backgroundColor: active ? t.color : 'var(--bg)',
+                    color: active ? '#fff' : 'var(--text-muted)',
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Amount */}
+          {/* ── Amount ── */}
           <div style={{ marginBottom: 22 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: 'var(--bg)', borderRadius: 16, padding: '14px 20px', border: `2px solid ${activeType?.color || 'var(--accent)'}` }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              backgroundColor: 'var(--bg)', borderRadius: 16,
+              padding: '14px 20px', border: `2px solid ${accentColor}`,
+            }}>
               <span style={{ fontSize: 32, fontWeight: 600, color: 'var(--text-muted)' }}>₹</span>
-              <input ref={amountRef} type="number" inputMode="decimal" value={amount}
+              <input
+                ref={amountRef}
+                type="number"
+                inputMode="decimal"
+                value={amount}
                 onChange={e => setAmount(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && amount && Number(amount) > 0 && handleSave()}
                 placeholder="0"
-                style={{ flex: 1, fontSize: 36, fontWeight: 700, color: 'var(--text-primary)', backgroundColor: 'transparent', border: 'none', outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
+                style={{
+                  flex: 1, fontSize: 36, fontWeight: 700,
+                  color: 'var(--text-primary)', backgroundColor: 'transparent',
+                  border: 'none', outline: 'none', fontFamily: 'inherit', minWidth: 0,
+                }}
+              />
             </div>
           </div>
 
-          {/* EXPENSE / INCOME: Category */}
+          {/* ── EXPENSE / INCOME: Category / Income Source ── */}
           {!isTransfer && (
             <div style={{ marginBottom: 22 }}>
-              <label style={fieldLabel(catLabel)}>{catLabel}</label>
+              <label style={label}>
+                {isIncome ? 'Income Source' : 'Category'}
+              </label>
               {!filteredCats.length ? (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[1,2,3,4].map(i => <Skeleton key={i} width="80px" height="38px" style={{ borderRadius: 100 }} />)}
+                  {[1,2,3,4].map(i => (
+                    <Skeleton key={i} width="80px" height="38px" style={{ borderRadius: 100 }} />
+                  ))}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 148, overflowY: 'auto' }}>
-                  {filteredCats.map(cat => (
-                    <button key={cat.id} onClick={() => setCategoryId(cat.id)}
-                      style={chipStyle(categoryId === cat.id)}>
-                      {cat.icon && <span style={{ fontSize: 15 }}>{cat.icon}</span>}
-                      {cat.name}
-                    </button>
-                  ))}
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', gap: 8,
+                  maxHeight: 160, overflowY: 'auto',
+                }}>
+                  {filteredCats.map(cat => {
+                    const icon = resolveIcon(cat);
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setCategoryId(cat.id)}
+                        style={chip(categoryId === cat.id)}
+                      >
+                        {icon && <span style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}
+                        {cat.name}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
-          {/* TRANSFER: From/To Account */}
+          {/* ── TRANSFER: From → To accounts ── */}
           {isTransfer && (
             <div style={{ marginBottom: 22 }}>
-              <label style={fieldLabel('From Account')}>From Account</label>
+              <label style={label}>From Account</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 {(accounts || []).map(acc => (
-                  <button key={acc.id} onClick={() => setAccountId(acc.id)}
-                    style={chipStyle(accountId === acc.id)}>
+                  <button key={acc.id} onClick={() => setAccountId(acc.id)} style={chip(accountId === acc.id)}>
                     {acc.name}
                   </button>
                 ))}
               </div>
-              <label style={fieldLabel('To Account')}>To Account</label>
+
+              <label style={label}>To Account</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {(accounts || []).filter(a => a.id !== accountId).map(acc => (
-                  <button key={acc.id} onClick={() => setToAccountId(acc.id)}
-                    style={{ ...chipStyle(toAccountId === acc.id), borderColor: toAccountId === acc.id ? '#3B82F6' : undefined, backgroundColor: toAccountId === acc.id ? 'rgba(59,130,246,0.08)' : undefined, color: toAccountId === acc.id ? '#3B82F6' : undefined }}>
+                  <button
+                    key={acc.id}
+                    onClick={() => setToAccountId(acc.id)}
+                    style={{
+                      ...chip(toAccountId === acc.id),
+                      ...(toAccountId === acc.id ? {
+                        backgroundColor: 'rgba(59,130,246,0.12)',
+                        color: '#3B82F6',
+                        outline: '2px solid #3B82F6',
+                      } : {}),
+                    }}
+                  >
                     {acc.name}
                   </button>
                 ))}
@@ -288,49 +420,71 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
             </div>
           )}
 
-          {/* Party / Source / Note label */}
+          {/* ── Merchant (expense) / Source (income) — NOT shown for transfer ── */}
           {!isTransfer && (
             <div style={{ marginBottom: 18 }}>
-              <label style={fieldLabel(partyLabel)}>{partyLabel} <span style={{ textTransform: 'none', color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-              <input type="text" className="qa-input" value={party} onChange={e => setParty(e.target.value)}
-                placeholder={partyPlaceholder} style={inputStyle}
-                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+              <label style={label}>
+                {partyLabel}
+                <span style={optionalSpan}>(optional)</span>
+              </label>
+              <input
+                type="text"
+                className="qa-input"
+                value={party}
+                onChange={e => setParty(e.target.value)}
+                placeholder={partyPlaceholder}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = accentColor}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             </div>
           )}
 
-          {/* Notes */}
+          {/* ── Note — context-aware placeholder, shown for all types ── */}
           <div style={{ marginBottom: 18 }}>
-            <label style={fieldLabel('Note')}>Note <span style={{ textTransform: 'none', color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-            <input type="text" className="qa-input" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder={isTransfer ? 'e.g. Monthly rent transfer' : 'e.g. Dinner with family'}
+            <label style={label}>
+              Note
+              <span style={optionalSpan}>(optional)</span>
+            </label>
+            <input
+              type="text"
+              className="qa-input"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder={notePlaceholder(type)}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+              onFocus={e => e.target.style.borderColor = accentColor}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
           </div>
 
-          {/* Date */}
+          {/* ── Date ── */}
           <div style={{ marginBottom: 18 }}>
-            <label style={fieldLabel('Date')}>Date</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            <label style={label}>Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+              onFocus={e => e.target.style.borderColor = accentColor}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
           </div>
 
-          {/* Account (for expense/income) */}
+          {/* ── Account chips (expense + income; for transfer this is above) ── */}
           {!isTransfer && (
             <div style={{ marginBottom: 18 }}>
-              <label style={fieldLabel('Account')}>Account</label>
+              <label style={label}>Account</label>
               {!accounts ? (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[1,2,3].map(i => <Skeleton key={i} width="80px" height="38px" style={{ borderRadius: 100 }} />)}
+                  {[1,2,3].map(i => (
+                    <Skeleton key={i} width="80px" height="38px" style={{ borderRadius: 100 }} />
+                  ))}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {accounts.map(acc => (
-                    <button key={acc.id} onClick={() => setAccountId(acc.id)}
-                      style={chipStyle(accountId === acc.id)}>
+                    <button key={acc.id} onClick={() => setAccountId(acc.id)} style={chip(accountId === acc.id)}>
                       {acc.name}
                     </button>
                   ))}
@@ -339,28 +493,51 @@ export default function QuickAdd({ open, onClose, editTransaction, onSaved }) {
             </div>
           )}
 
-          {/* Payment method (expense/income only) */}
+          {/* ── Payment Method (expense + income only) ── */}
           {!isTransfer && (
             <div style={{ marginBottom: 28 }}>
-              <label style={fieldLabel('Payment Method')}>Payment Method</label>
+              <label style={label}>Payment Method</label>
               <div style={{ position: 'relative' }}>
-                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                  style={{ ...inputStyle, appearance: 'none', paddingRight: 40, cursor: 'pointer' }}>
+                <select
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value)}
+                  style={{ ...inputStyle, appearance: 'none', paddingRight: 40, cursor: 'pointer' }}
+                >
                   {PAYMENT_METHODS.map(pm => (
                     <option key={pm.value} value={pm.value}>{pm.label}</option>
                   ))}
                 </select>
-                <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)', fontSize: 11 }}>▼</div>
+                <span style={{
+                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                  pointerEvents: 'none', color: 'var(--text-muted)', fontSize: 11,
+                }}>▼</span>
               </div>
             </div>
           )}
 
-          {/* Save button */}
-          <button onClick={handleSave}
+          {/* ── Save button ── */}
+          <button
+            onClick={handleSave}
             disabled={saving || !amount || Number(amount) <= 0}
-            style={{ width: '100%', padding: '16px 24px', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', color: '#fff', backgroundColor: saving || !amount || Number(amount) <= 0 ? '#94A3B8' : activeType?.color || NAVY, border: 'none', borderRadius: 16, cursor: saving || !amount || Number(amount) <= 0 ? 'not-allowed' : 'pointer', transition: 'background-color 0.2s', opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Saving…' : editTransaction ? 'Update Transaction' : `Save ${activeType?.label || 'Transaction'}`}
+            style={{
+              width: '100%', padding: '16px 24px',
+              fontSize: 16, fontWeight: 700, fontFamily: 'inherit',
+              color: '#fff', border: 'none', borderRadius: 16,
+              cursor: saving || !amount || Number(amount) <= 0 ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              backgroundColor: saving || !amount || Number(amount) <= 0
+                ? '#94A3B8'
+                : accentColor,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving
+              ? 'Saving…'
+              : editTransaction
+                ? 'Update Transaction'
+                : `Save ${activeType?.label || 'Transaction'}`}
           </button>
+
         </div>
       </div>
     </>
