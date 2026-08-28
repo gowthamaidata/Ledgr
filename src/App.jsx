@@ -17,6 +17,7 @@ import Planning from './pages/Planning';
 import Settings from './pages/Settings';
 import Admin from './pages/Admin';
 import QuickAdd from './pages/QuickAdd';
+import PWAInstall from './components/PWAInstall';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -128,6 +129,7 @@ function AppLayout() {
         onSaved={handleQuickAddSave}
         editTransaction={editTransaction}
       />
+      <PWAInstall />
     </>
   );
 }

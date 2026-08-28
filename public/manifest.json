@@ -1,0 +1,27 @@
+{
+  "name": "Ledgr — Personal Finance",
+  "short_name": "Ledgr",
+  "description": "Track expenses, income, and budgets with ease",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1729",
+  "theme_color": "#0F1729",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.svg",     "sizes": "any",      "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "Add",
+      "url": "/?action=add",
+      "description": "Quickly add a new transaction"
+    }
+  ],
+  "screenshots": []
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, ChevronLeft, ChevronRight, PlusCircle, Trash2, FileDown, Loader2 } from 'lucide-react'
+import SwipeToDelete from '../components/SwipeToDelete'
 import { downloadTransactionPdf } from '../lib/pdfExport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -75,6 +76,7 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
   const [showFilters, setShowFilters] = useState(true)
   const [localRefresh, setLocalRefresh] = useState(0)
   const [pdfExporting, setPdfExporting] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const monthRange = getMonthRange(monthOffset)
 
@@ -183,12 +185,17 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
     setOffset(next)
   }
 
-  const handleDelete = async (tx) => {
-    const confirmed = await toast.confirm(
-      `Delete this ${tx.type} of ${formatINR(tx.amount)}?`,
-      { danger: true }
-    )
-    if (!confirmed) return
+  const handleDelete = async (tx, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmed = await toast.confirm(
+        `Delete this ${tx.type} of ${formatINR(tx.amount)}?`,
+        { danger: true }
+      )
+      if (!confirmed) return
+    }
+
+    setDeletingId(tx.id)
+    await new Promise(r => setTimeout(r, 280)) // allow exit animation
 
     const { error } = await supabase
       .from('transactions')
@@ -196,12 +203,13 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
       .eq('id', tx.id)
       .eq('user_id', user.id)
 
+    setDeletingId(null)
+
     if (error) {
       toast.error('Failed to delete transaction')
       console.error('Delete error:', error)
     } else {
       toast.success('Transaction deleted')
-      // Bump localRefresh to trigger re-fetch via useEffect
       setLocalRefresh(prev => prev + 1)
     }
   }
@@ -550,111 +558,81 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
               const isExpense = tx.type === 'expense'
               const isIncome = tx.type === 'income'
 
+              const isDeleting = deletingId === tx.id
               return (
-                <div
-                  key={tx.id}
-                  onClick={() => onEditTransaction && onEditTransaction(tx)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    cursor: onEditTransaction ? 'pointer' : 'default',
-                    borderBottom: idx < group.items.length - 1 ? '1px solid var(--border)' : 'none',
-                    transition: 'background-color 0.1s ease',
-                    position: 'relative',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--surface-muted, rgba(0,0,0,0.02))' }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent' }}
-                >
-                  {/* Emoji icon circle */}
-                  <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--surface-muted, #F3F4F6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px',
-                    flexShrink: 0,
-                  }}>
-                    {emoji}
-                  </div>
-
-                  {/* Middle: merchant/party + category */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      color: 'var(--text-primary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      letterSpacing: '-0.1px',
-                    }}>
-                      {tx.party || categoryName}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: 'var(--text-muted)',
-                      marginTop: '3px',
-                      fontWeight: 500,
-                    }}>
-                      {categoryName}
-                    </div>
-                  </div>
-
-                  {/* Right: amount + payment method badge */}
-                  <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      color: isIncome ? 'var(--income)' : isExpense ? 'var(--expense)' : 'var(--text-primary)',
-                      letterSpacing: '-0.2px',
-                    }}>
-                      {isIncome ? '+' : isExpense ? '-' : ''}{formatINR(tx.amount)}
-                    </div>
-                    {tx.payment_method && (
-                      <span style={{
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        color: 'var(--text-muted)',
-                        backgroundColor: 'var(--surface-muted, #F3F4F6)',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        letterSpacing: '0.3px',
-                        textTransform: 'uppercase',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {paymentLabel(tx.payment_method)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Delete button (shows on hover via parent) */}
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDelete(tx) }}
-                    className="tx-delete-btn"
-                    style={{
-                      position: 'absolute',
-                      right: '6px',
-                      top: '6px',
-                      background: 'none',
-                      border: 'none',
-                      padding: '4px',
-                      cursor: 'pointer',
-                      color: 'var(--expense)',
-                      opacity: 0,
-                      transition: 'opacity 0.15s ease',
-                      borderRadius: '6px',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '0' }}
-                    aria-label="Delete transaction"
+                <div key={tx.id} style={{
+                  borderBottom: idx < group.items.length - 1 ? '1px solid var(--border)' : 'none',
+                  overflow: 'hidden',
+                  maxHeight: isDeleting ? 0 : '120px',
+                  opacity: isDeleting ? 0 : 1,
+                  transition: isDeleting
+                    ? 'max-height 0.28s ease, opacity 0.2s ease'
+                    : 'none',
+                }}>
+                  <SwipeToDelete
+                    onDelete={() => handleDelete(tx, true)}
+                    deleteLabel="Delete"
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <div
+                      onClick={() => !isDeleting && onEditTransaction && onEditTransaction(tx)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '14px 16px',
+                        cursor: onEditTransaction && !isDeleting ? 'pointer' : 'default',
+                        transition: 'background-color 0.1s ease',
+                        position: 'relative',
+                        backgroundColor: 'var(--surface)',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--surface-muted, rgba(0,0,0,0.02))' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--surface)' }}
+                    >
+                      {/* Emoji icon circle */}
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '50%',
+                        backgroundColor: 'var(--surface-muted, #F3F4F6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '20px', flexShrink: 0,
+                      }}>
+                        {emoji}
+                      </div>
+
+                      {/* Middle: merchant/party + category */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.1px' }}>
+                          {tx.party || categoryName}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', fontWeight: 500 }}>
+                          {categoryName}
+                        </div>
+                      </div>
+
+                      {/* Right: amount + delete btn (desktop hover) */}
+                      <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: isIncome ? 'var(--income)' : isExpense ? 'var(--expense)' : 'var(--text-primary)', letterSpacing: '-0.2px' }}>
+                          {isIncome ? '+' : isExpense ? '-' : ''}{formatINR(tx.amount)}
+                        </div>
+                        {tx.payment_method && (
+                          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', backgroundColor: 'var(--surface-muted, #F3F4F6)', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.3px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                            {paymentLabel(tx.payment_method)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Desktop: small trash button on hover */}
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete(tx) }}
+                        aria-label="Delete transaction"
+                        className="tx-delete-btn"
+                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(239,68,68,0.08)', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--expense)', opacity: 0, transition: 'opacity 0.15s', borderRadius: 8 }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </SwipeToDelete>
                 </div>
               )
             })}
