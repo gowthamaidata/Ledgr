@@ -72,35 +72,40 @@ function UserDetailModal({ user: u, onClose }) {
       setStatsLoading(true);
       setTxLoading(true);
       try {
-        // Fetch user financial stats
-        const [txRes, budgetRes, accountRes] = await Promise.all([
-          supabase.from('transactions').select('type, amount').eq('user_id', u.user_id),
-          supabase.from('budgets').select('id').eq('user_id', u.user_id),
-          supabase.from('accounts').select('id').eq('user_id', u.user_id),
+        // Use SECURITY DEFINER RPCs — direct table queries would be blocked by RLS
+        // because auth.uid() = admin's ID, not the target user's ID.
+        const [statsRes, txRes] = await Promise.all([
+          supabase.rpc('admin_get_user_stats', { p_user_id: u.user_id }),
+          supabase.rpc('admin_get_user_transactions', { p_user_id: u.user_id, p_limit: 10 }),
         ]);
 
-        const txs = txRes.data || [];
-        const totalExpense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-        const totalIncome = txs.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-
-        setStats({
-          total_transactions: txs.length,
-          total_expense: totalExpense,
-          total_income: totalIncome,
-          balance: totalIncome - totalExpense,
-          budgets: (budgetRes.data || []).length,
-          accounts: (accountRes.data || []).length,
-        });
+        if (statsRes.error) {
+          console.error('admin_get_user_stats error:', statsRes.error);
+          setStats({ _error: statsRes.error.message });
+        } else {
+          const s = typeof statsRes.data === 'string' ? JSON.parse(statsRes.data) : statsRes.data;
+          setStats({
+            total_transactions: Number(s?.total_transactions || 0),
+            total_expense:      Number(s?.total_expense || 0),
+            total_income:       Number(s?.total_income || 0),
+            balance:            Number(s?.total_income || 0) - Number(s?.total_expense || 0),
+            budgets:            Number(s?.budgets || 0),
+            accounts:           Number(s?.accounts || 0),
+          });
+        }
         setStatsLoading(false);
 
-        // Recent transactions
-        const { data: recent } = await supabase
-          .from('transactions')
-          .select('*, categories(name, icon)')
-          .eq('user_id', u.user_id)
-          .order('transaction_date', { ascending: false })
-          .limit(10);
-        setTransactions(recent || []);
+        if (txRes.error) {
+          console.error('admin_get_user_transactions error:', txRes.error);
+          setTransactions([]);
+        } else {
+          // Map RPC result columns to what the render expects
+          setTransactions((txRes.data || []).map(t => ({
+            ...t,
+            categories: { name: t.category_name },
+            accounts:   { name: t.account_name },
+          })));
+        }
         setTxLoading(false);
       } catch (err) {
         console.error('User detail load error:', err);
@@ -593,36 +598,32 @@ function AllTransactionsTab() {
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: 14 }}>No transactions found</div>
       ) : (
         <div style={{ backgroundColor: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg)' }}>
-                  {['Date', 'Type', 'Category', 'Party', 'Note', 'Account', 'Amount'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((tx, i) => (
-                  <tr key={tx.id} style={{ transition: 'background-color 0.1s' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12, borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', whiteSpace: 'nowrap' }}>{formatDate(tx.transaction_date, 'short')}</td>
-                    <td style={{ padding: '10px 14px', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: TYPE_COLORS[tx.type] || 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tx.type}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}>{tx.categories?.name || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 500, borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.party || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.notes || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12, borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', whiteSpace: 'nowrap' }}>{tx.accounts?.name || '—'}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: TYPE_COLORS[tx.type] || 'var(--text-primary)', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}{formatINR(tx.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Mobile-friendly card list (no horizontal scroll) */}
+          {filtered.map((tx, i) => {
+            const catName  = tx.categories?.name || tx.category_name || '—';
+            const party    = tx.party || '—';
+            const sign     = tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : '';
+            const amtColor = TYPE_COLORS[tx.type] || 'var(--text-primary)';
+            return (
+              <div key={tx.id || i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '12px 14px',
+                borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                {/* Type pill */}
+                <span style={{ fontSize: 10, fontWeight: 700, color: amtColor, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, width: 50 }}>{tx.type}</span>
+                {/* Middle */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{party}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{catName} · {formatDate(tx.transaction_date, 'short')}</div>
+                </div>
+                {/* Amount */}
+                <div style={{ fontSize: 14, fontWeight: 700, color: amtColor, flexShrink: 0 }}>
+                  {sign}{formatINR(tx.amount)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
