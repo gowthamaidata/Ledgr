@@ -388,16 +388,14 @@ function UserDetailModal({ user: u, onClose }) {
 }
 
 /* ── Admin Stats Card ─────────────────────────────────────── */
-function StatCard({ icon: Icon, label, value, loading }) {
+function StatCard({ label, value, loading }) {
   return (
-    <div style={{ flex: '1 1 0', minWidth: 140, backgroundColor: 'var(--surface)', borderRadius: 14, padding: '18px 16px', border: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <Icon size={16} style={{ color: GOLD }} />
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-      </div>
-      {loading ? <Skeleton height="28px" width="60%" /> : (
-        <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)' }}>{value != null ? value.toLocaleString() : '--'}</div>
-      )}
+    <div style={{ flex: '1 1 0', minWidth: 110, background: 'var(--surface)', borderRadius: 14, padding: '16px 14px', border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>{label}</div>
+      {loading
+        ? <div style={{ height: 28, width: '60%', background: 'var(--border)', borderRadius: 6 }} />
+        : <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{value != null ? Number(value).toLocaleString('en-IN') : '—'}</div>
+      }
     </div>
   );
 }
@@ -801,23 +799,20 @@ export default function Admin() {
     <div style={{ padding: '20px 0 80px', maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg, ${NAVY}, #1A2540)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Shield size={22} color={GOLD} />
-        </div>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Admin Console</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Manage users, monitor activity, review audit logs</p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '2px 0 0' }}>Users · Activity · Audit logs</p>
         </div>
       </div>
 
-      {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: 2, padding: 4, backgroundColor: 'var(--bg)', borderRadius: 14, border: '1px solid var(--border)', marginBottom: 24, overflowX: 'auto' }}>
+      {/* Tab Bar - clean underline style */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24, gap: 0 }}>
         {TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
           return (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: isActive ? 600 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s', backgroundColor: isActive ? 'var(--surface)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 16px', borderRadius: 0, border: 'none', fontSize: 13, fontWeight: isActive ? 600 : 500, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', backgroundColor: 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', borderBottom: isActive ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
               <Icon size={14} />
               {tab.label}
             </button>
@@ -829,14 +824,14 @@ export default function Admin() {
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <StatCard icon={Users} label="Total Users" value={stats?.total_users} loading={statsLoading} />
-            <StatCard icon={ArrowUpDown} label="Transactions" value={stats?.total_transactions} loading={statsLoading} />
-            <StatCard icon={Wallet} label="Accounts" value={stats?.total_accounts} loading={statsLoading} />
+            <StatCard label="Total Users" value={stats?.total_users} loading={statsLoading} />
+            <StatCard label="Transactions" value={stats?.total_transactions} loading={statsLoading} />
+            <StatCard label="Accounts" value={stats?.total_accounts} loading={statsLoading} />
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <StatCard icon={Users} label="New Today" value={stats?.users_today} loading={statsLoading} />
-            <StatCard icon={ArrowUpDown} label="Txns Today" value={stats?.transactions_today} loading={statsLoading} />
-            <StatCard icon={Target} label="Categories" value={stats?.total_categories} loading={statsLoading} />
+            <StatCard label="New Today" value={stats?.users_today} loading={statsLoading} />
+            <StatCard label="Txns Today" value={stats?.transactions_today} loading={statsLoading} />
+            <StatCard label="Categories" value={stats?.total_categories} loading={statsLoading} />
           </div>
         </div>
       )}

@@ -322,18 +322,6 @@ export default function Insights() {
         zIndex: 20,
         borderBottom: `1px solid ${GOLD}15`,
       }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 10,
-            border: 'none', backgroundColor: 'rgba(255,255,255,0.08)',
-            color: '#fff', cursor: 'pointer',
-          }}
-        >
-          <ChevronLeft size={20} />
-        </button>
-
         <h1 style={{
           margin: 0, fontSize: 18, fontWeight: 700,
           color: '#fff', letterSpacing: '-0.02em',

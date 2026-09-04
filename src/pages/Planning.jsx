@@ -49,50 +49,19 @@ export default function Planning() {
   const navigate = useNavigate()
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg, #F5F6FA)' }}>
-      {/* Navy Header Bar */}
-      <div style={{
-        background: `linear-gradient(135deg, ${NAVY} 0%, ${NAVY_LIGHT} 100%)`,
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 10,
-            border: 'none', backgroundColor: 'rgba(255,255,255,0.1)',
-            color: WHITE, cursor: 'pointer',
-          }}
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <span style={{
-          fontSize: 18, fontWeight: 700, color: WHITE,
-          letterSpacing: '-0.01em',
-        }}>
-          Planning
-        </span>
-        <span style={{
-          fontSize: 13, fontWeight: 500, color: GOLD_LIGHT,
-        }}>
-          {currentMonthLabel}
-        </span>
+    <div style={{ paddingBottom: 32 }}>
+      {/* Clean page header - consistent with rest of app */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>Planning</h1>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>{currentMonthLabel}</span>
       </div>
 
-      <div style={{ padding: '16px 20px 100px', maxWidth: 600, margin: '0 auto' }}>
-        {/* Tab Bar - Navy with Gold active indicator */}
+      <div style={{ maxWidth: 600, margin: '0 auto' }}>
+        {/* Clean tab bar */}
         <div style={{
-          display: 'flex', gap: 4,
-          padding: 4,
-          backgroundColor: NAVY,
-          borderRadius: 14,
-          marginBottom: 20,
+          display: 'flex', gap: 0,
+          borderBottom: '1px solid var(--border)',
+          marginBottom: 24,
         }}>
           {TABS.map(tab => {
             const Icon = tab.icon
@@ -104,16 +73,18 @@ export default function Planning() {
                 style={{
                   flex: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '11px 12px',
-                  borderRadius: 11,
+                  padding: '12px 8px',
+                  borderRadius: 0,
                   border: 'none',
                   fontSize: 13,
                   fontWeight: isActive ? 600 : 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  backgroundColor: isActive ? GOLD : 'transparent',
-                  color: isActive ? NAVY : WHITE_60,
+                  transition: 'all 0.15s',
+                  backgroundColor: 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                  borderBottom: isActive ? '2px solid #D4A853' : '2px solid transparent',
+                  marginBottom: -1,
                 }}
               >
                 <Icon size={15} />

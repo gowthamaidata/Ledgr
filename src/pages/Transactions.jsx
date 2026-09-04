@@ -319,20 +319,20 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
               : <FileDown size={14} />}
             {pdfExporting ? 'Preparing…' : 'PDF'}
           </button>
-          {/* Filter toggle */}
+          {/* Filter toggle - minimal text link style */}
           <button
             onClick={() => setShowFilters(prev => !prev)}
             style={{
-              padding: '8px 18px', fontSize: '13px', fontWeight: 600,
-              borderRadius: '10px', border: 'none',
-              backgroundColor: 'var(--navy, #0F1729)', color: '#fff',
+              padding: '8px 14px', fontSize: '13px', fontWeight: 600,
+              borderRadius: '10px', border: '1.5px solid var(--border)',
+              backgroundColor: 'var(--surface)', color: 'var(--text-secondary)',
               cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'opacity 0.15s ease',
+              transition: 'background-color 0.15s ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg)' }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--surface)' }}
           >
-            {showFilters ? 'Hide Filters' : 'Filter'}
+            {showFilters ? 'Less' : 'Filter'}
           </button>
         </div>
       </div>
@@ -554,7 +554,19 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
           }}>
             {group.items.map((tx, idx) => {
               const categoryName = tx.categories?.name || 'Other'
-              const emoji = CATEGORY_ICONS[categoryName] || '📦'
+              // Resolve emoji — never render Lucide icon name strings
+              const emoji = (() => {
+                const direct = CATEGORY_ICONS[categoryName];
+                if (direct) return direct;
+                const lc = categoryName.toLowerCase();
+                const fm = { food:'🍽️',petrol:'⛽',fuel:'⛽',rent:'🏠',loan:'🏦',emi:'🏦',
+                  bills:'💡',transport:'🚗',shopping:'🛍️',health:'💊',travel:'✈️',
+                  family:'🎁',gift:'🎁',education:'📚',personal:'💇',entertainment:'🎬',
+                  savings:'📈',investment:'📈',salary:'💰',interest:'🏦',bonus:'🎉',
+                  grocery:'🛒',subscript:'💳',insurance:'🛡️',other:'📦',income:'💰' };
+                for (const [k,v] of Object.entries(fm)) if (lc.includes(k)) return v;
+                return '📦';
+              })()
               const isExpense = tx.type === 'expense'
               const isIncome = tx.type === 'income'
 
@@ -588,12 +600,12 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
                       onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--surface-muted, rgba(0,0,0,0.02))' }}
                       onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--surface)' }}
                     >
-                      {/* Emoji icon circle */}
+                      {/* Emoji icon */}
                       <div style={{
-                        width: '44px', height: '44px', borderRadius: '50%',
-                        backgroundColor: 'var(--surface-muted, #F3F4F6)',
+                        width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0,
+                        background: isIncome ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.07)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '20px', flexShrink: 0,
+                        fontSize: '16px', overflow: 'hidden',
                       }}>
                         {emoji}
                       </div>
@@ -608,16 +620,11 @@ export default function Transactions({ onEditTransaction, refreshKey }) {
                         </div>
                       </div>
 
-                      {/* Right: amount + delete btn (desktop hover) */}
-                      <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <div style={{ fontSize: '15px', fontWeight: 700, color: isIncome ? 'var(--income)' : isExpense ? 'var(--expense)' : 'var(--text-primary)', letterSpacing: '-0.2px' }}>
-                          {isIncome ? '+' : isExpense ? '-' : ''}{formatINR(tx.amount)}
+                      {/* Right: amount only — payment method badge removed (too noisy) */}
+                      <div style={{ flexShrink: 0 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: isIncome ? 'var(--income)' : isExpense ? 'var(--expense)' : 'var(--text-muted)', letterSpacing: '-0.2px' }}>
+                          {isIncome ? '+' : isExpense ? '−' : ''}{formatINR(tx.amount)}
                         </div>
-                        {tx.payment_method && (
-                          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', backgroundColor: 'var(--surface-muted, #F3F4F6)', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.3px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                            {paymentLabel(tx.payment_method)}
-                          </span>
-                        )}
                       </div>
 
                       {/* Desktop: small trash button on hover */}
